@@ -1,10 +1,4 @@
 
-## 2.3 Scheduled run
-Make your script run hourly. Write down what you used and how you're checking for possible errors and script failures.
-
-
-Good luck!
-
 ### 1. task
 - First I checked which users were logged in and their process ID with `who -u`:
 ```

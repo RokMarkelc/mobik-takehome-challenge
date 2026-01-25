@@ -1,13 +1,7 @@
-# - name: Verify Host Connectivity
-#   hosts: all
-#   tasks:
-#     - name: Ping all managed nodes
-#       ansible.builtin.ping:
-
 
 ---
 - name: Install Docker
-  hosts: all
+  hosts: debian_bookworm
   become: true
 
   tasks:
@@ -23,6 +17,7 @@
           - expect
           - git
           - ca-certificates
+          - gpg
         state: present
 
     - name: Create Docker GPG key directory
@@ -51,7 +46,7 @@
       ansible.builtin.apt:
         update_cache: yes
 
-    - name: Install Docker and Docker Compose
+    - name: Install Docker
       ansible.builtin.package:
         name:
           - docker-ce
@@ -72,3 +67,41 @@
         name: vagrant
         groups: docker
         append: yes
+
+- name: Install Minikube
+  hosts: debian_bookworm
+  become: true
+
+  tasks:
+    - name: Download Minikube Debian package
+      ansible.builtin.get_url:
+        url: https://storage.googleapis.com/minikube/releases/latest/minikube_latest_amd64.deb
+        dest: /var/minikube_latest_amd64.deb
+
+    - name: Install Minikube
+      command: apt install /var/minikube_latest_amd64.deb -y
+
+- name: Install kubectl
+  hosts: debian_bookworm
+  become: true
+
+  tasks:
+    - name: Download Kubernetes' official GPG key
+      shell: curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.28/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+
+    - name: Add Kubernetes repository to Apt sources
+      ansible.builtin.lineinfile:
+        path: /etc/apt/sources.list.d/kubernetes.list
+        line: "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.34/deb/ /"
+        state: present
+        create: yes
+
+    - name: Update apt cache after adding Kubernetes repository
+      ansible.builtin.apt:
+        update_cache: yes
+
+    - name: Install kubectl
+      ansible.builtin.package:
+        name:
+          - kubectl
+        state: present
