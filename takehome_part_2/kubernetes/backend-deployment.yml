@@ -9,6 +9,11 @@ spec:
   selector:
     matchLabels:
       app: backend
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 50%
+    type: RollingUpdate
   template:
     metadata:
       labels:
@@ -16,7 +21,7 @@ spec:
     spec:
       containers:
       - name: backend
-        image: app-backend
+        image: app-backend:IMAGE_TAG_PLACEHOLDER
         imagePullPolicy: Never
         ports:
         - containerPort: 8080

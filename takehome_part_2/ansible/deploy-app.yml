@@ -1,0 +1,77 @@
+---
+# Checking if the Minikube cluster is up and starting it if it's not
+- name: Start Minikube
+  hosts: debian_bookworm
+
+  tasks:
+    - name: Check Minikube cluster's status
+      ansible.builtin.command: minikube status | echo $?
+      register: minikube_status
+      ignore_errors: true
+
+    - name: Start Minikube cluster
+      ansible.builtin.command: minikube start --kubernetes-version='v1.34.0'
+      when: minikube_status.failed
+      become: yes
+      become_user: vagrant
+
+    - name: Check Minikube cluster's status again
+      ansible.builtin.command: minikube status
+      register: new_minikube_status
+
+    - name: Display cluster status
+      debug: var=new_minikube_status.stdout_lines
+
+# Configures the shell to use Minikube's Docker daemon
+# https://minikube.sigs.k8s.io/docs/handbook/pushing/#Linux
+- name: Configure the shell to use Minikube's Docker daemon
+  hosts: debian_bookworm
+
+  tasks:
+    - name: Configure shell to use Minikube's Docker daemon
+      ansible.builtin.lineinfile:
+        path: ~/.bashrc
+        line: "eval $(minikube docker-env)"
+      become: yes
+      become_user: vagrant
+
+# Builds the application images and applies the Kubernetes manifests in the correct order
+- name: Build and deploy all the applications
+  hosts: debian_bookworm
+  become: yes
+  become_user: vagrant
+
+  tasks:
+    # Database
+    - name: Deploy Postgres DB with service
+      ansible.builtin.command: kubectl apply -f /vagrant/kubernetes/db-deployment.yml
+    
+    # Backend
+    - name: Get backend version
+      ansible.builtin.command: cat /vagrant/app/backend/VERSION
+      register: backend_version
+
+    - name: Build backend image
+      community.docker.docker_image:
+        name: app-backend
+        tag: "{{ backend_version.stdout }}"
+        build:
+          path: /vagrant/app/backend
+        source: build
+        force_absent: true
+
+    - name: Check if backend is already running
+      ansible.builtin.command: kubectl get pod -l app=backend --field-selector=status.phase==Running -o jsonpath="{.items[0].metadata.name}"
+
+    - name: Deploy backend with service
+      ansible.builtin.shell: sed "s/IMAGE_TAG_PLACEHOLDER/{{ backend_version.stdout }}/g" /vagrant/kubernetes/backend-deployment.yml | kubectl apply -f -
+
+    - name: Check if backend is running
+      ansible.builtin.command: kubectl get pod -l app=backend --field-selector=status.phase==Running -o jsonpath="{.items[0].metadata.name}"
+    
+    # Frontend
+
+    # Build frontend docker image
+
+    # Deploy frontend
+
