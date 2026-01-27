@@ -9,6 +9,11 @@ spec:
   selector:
     matchLabels:
       app: frontend
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 50%
+    type: RollingUpdate
   template:
     metadata:
       labels:
@@ -16,7 +21,7 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: app-frontend
+        image: app-frontend:IMAGE_TAG_PLACEHOLDER
         imagePullPolicy: Never
         ports:
         - containerPort: 4200
@@ -29,9 +34,12 @@ metadata:
   labels:
     app: frontend
 spec:
-  type: ClusterIP
+  type: NodePort
   ports:
-    - protocol: TCP
+    - name: http
+      protocol: TCP
       port: 4200
+      targetPort: 4200
+      nodePort: 30080
   selector:
     app: frontend

@@ -22,6 +22,8 @@
           - ca-certificates
           # Kubectl
           - gpg
+          # Used during deployment
+          - jq
         state: present
 
     - name: Create Docker GPG key directory
@@ -57,7 +59,6 @@
           - docker-ce-cli
           - containerd.io
           - docker-buildx-plugin
-          # - docker-compose-plugin
         state: present
 
     - name: Ensure Docker service is enabled and started
@@ -90,8 +91,14 @@
   become: true
 
   tasks:
+    - name: Check if the kubernetes signing key file exists
+      stat:
+        path: /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+      register: k8s_gpg_key_check
+
     - name: Download Kubernetes' official GPG key
       shell: curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.28/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+      when: not k8s_gpg_key_check.stat.exists
 
     - name: Add Kubernetes repository to Apt sources
       ansible.builtin.lineinfile:
