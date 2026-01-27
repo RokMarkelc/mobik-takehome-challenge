@@ -6,7 +6,7 @@ WORKDIR /usr/src/app
 COPY . .
 
 # Build the app
-RUN npm install
+RUN npm install && npm run build
 
 EXPOSE 4200
 
