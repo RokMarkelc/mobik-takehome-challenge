@@ -7,7 +7,7 @@ Vagrant.configure("2") do |config|
   # https://docs.vagrantup.com.
   config.vm.define "debian_bookworm" do |debian_bookworm| 
     debian_bookworm.vm.box = "debian/bookworm64"
-    debian_bookworm.vm.version = "12.20250126.1"
+    debian_bookworm.vm.box.version = "12.20250126.1"
 
     debian_bookworm.vm.provision :ansible_local do |ansible|
       ansible.playbook = "ansible/setup.yml"
