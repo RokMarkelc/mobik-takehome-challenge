@@ -55,7 +55,12 @@ To provision and deploy the whole architecture automatically you will need:
         ```
     - The frontend should be accessible on http://localhost:30080 and new todos can be added.
 
-3. **Cleanup**:
+3. **Development**:
+    When updating backend or frontend code, you will need to update the docker image's version, otherwise a new one won't be built. Version that is used for tagging a docker image is read from:
+      - backend: `VERSION` file
+      - frontend: `version` parameter in `package.json`
+
+4. **Cleanup**:
     To delete the VM and everything inside run:
     ```
     make destroy-vm
