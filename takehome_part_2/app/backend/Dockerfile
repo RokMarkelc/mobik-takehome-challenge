@@ -9,9 +9,9 @@ COPY . .
 RUN go mod download && go mod tidy
 
 # Build the app
-RUN go build -o ./backend.go ./cmd/server
+RUN go build -o /app/backend.go /app/cmd/server
 
 EXPOSE 8080
 
-ENTRYPOINT ["./docker/entrypoint.sh"]
-CMD ["./backend.go"]
+ENTRYPOINT ["/app/docker/entrypoint.sh"]
+CMD ["/app/backend.go"]
