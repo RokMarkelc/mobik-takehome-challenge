@@ -27,7 +27,7 @@ spec:
         - containerPort: 8080
         env:
           - name: DB_HOST
-            value: "postgres.default.svc"
+            value: "postgres" # Internal kubernetes service name for postgres pod
           - name: DB_PORT
             value: "5432"
           - name: DB_USER

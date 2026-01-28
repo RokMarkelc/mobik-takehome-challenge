@@ -13,4 +13,5 @@ RUN go build -o ./backend.go ./cmd/server
 
 EXPOSE 8080
 
+ENTRYPOINT ["./docker/entrypoint.sh"]
 CMD ["./backend.go"]
