@@ -8,6 +8,7 @@
       ansible.builtin.command: minikube status | echo $?
       register: minikube_status
       ignore_errors: true
+      changed_when: false
 
     - name: Start Minikube cluster
       ansible.builtin.command: minikube start --kubernetes-version='v1.34.0' --memory=2560 --cpus=2 --driver=docker
@@ -18,24 +19,26 @@
     - name: Check Minikube cluster's status again
       ansible.builtin.command: minikube status
       register: new_minikube_status
+      changed_when: false
 
     - name: Show cluster status
       debug: var=new_minikube_status.stdout_lines
 
-# Configures the shell to use Minikube's Docker daemon
-# https://minikube.sigs.k8s.io/docs/handbook/pushing/#Linux
+# Saving Minikube Docker environment variables for building images inside Minikube's Docker daemon
 - name: Configure the shell to use Minikube's Docker daemon
   hosts: debian_bookworm
-  become: true
-  become_user: vagrant
 
   tasks:
-    - name: Configure shell to use Minikube's Docker daemon
-      ansible.builtin.lineinfile:
-        path: ~/.profile
-        line: "eval $(minikube docker-env)"
+    - name: Get Minikube docker-env as JSON
+      ansible.builtin.command: minikube docker-env --output json --shell=none
+      register: minikube_env_json
+      changed_when: false
 
-# Builds the application images and applies the Kubernetes manifests in the correct order
+    - name: Set minikube_env fact
+      ansible.builtin.set_fact:
+        minikube_env: "{{ minikube_env_json.stdout | from_json }}"
+
+# Builds applications images and applies the Kubernetes manifests in the correct order
 - name: Build and deploy all the applications
   hosts: debian_bookworm
   become: true
@@ -48,11 +51,13 @@
 
     - name: Wait for Postgres DB to start running
       ansible.builtin.command: kubectl wait -l app=postgres --for=jsonpath='{.status.phase}'=Running --timeout=60s pod
+      changed_when: false
     
     # Backend
     - name: Get backend version
       ansible.builtin.command: cat /vagrant/app/backend/VERSION
       register: backend_version
+      changed_when: false
 
     - name: Build backend image
       community.docker.docker_image:
@@ -60,18 +65,20 @@
         build:
           path: /vagrant/app/backend
         source: build
-      register: output
+      # This applies the variables (DOCKER_HOST, DOCKER_CERT_PATH, etc.) to this task
+      environment: "{{ minikube_env }}"
 
     - name: Deploy backend with service
       ansible.builtin.shell: sed "s/IMAGE_TAG_PLACEHOLDER/{{ backend_version.stdout }}/g" /vagrant/kubernetes/backend-deployment.yml | kubectl apply -f -
 
     - name: Wait for backend to start running
-      ansible.builtin.command: kubectl wait -l app=backend --for=jsonpath='{.status.phase}'=Running --timeout=10s pod
+      ansible.builtin.command: kubectl wait -l app=backend --for=jsonpath='{.status.phase}'=Running --timeout=40s pod
     
     # Frontend
     - name: Get frontend version
       ansible.builtin.shell: jq .version /vagrant/app/frontend/package.json | tr -d '"'
       register: frontend_version
+      changed_when: false
 
     - name: Build frontend image
       community.docker.docker_image:
@@ -79,7 +86,8 @@
         build:
           path: /vagrant/app/frontend
         source: build
-      register: output
+      # This applies the variables (DOCKER_HOST, DOCKER_CERT_PATH, etc.) to this task
+      environment: "{{ minikube_env }}"
 
     - name: Deploy frontend with service
       ansible.builtin.shell: sed "s/IMAGE_TAG_PLACEHOLDER/{{ frontend_version.stdout }}/g" /vagrant/kubernetes/frontend-deployment.yml | kubectl apply -f -
