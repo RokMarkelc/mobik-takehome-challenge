@@ -50,7 +50,7 @@
       ansible.builtin.command: kubectl apply -f /vagrant/kubernetes/db-deployment.yml
 
     - name: Wait for Postgres DB to start running
-      ansible.builtin.command: kubectl wait -l app=postgres --for=jsonpath='{.status.phase}'=Running --timeout=60s pod
+      ansible.builtin.command: kubectl wait -l app=postgres --for=jsonpath='{.status.phase}'=Running --timeout=180s pod
       changed_when: false
     
     # Backend

@@ -81,3 +81,21 @@ After deployment, the frontend is exposed via a Kubernetes NodePort Service. At 
 - **Services not working correctly**: Exec into container's shell with `make ssh-pod service=<service-name>` (postgres/frontend/backend) and check if everything is configured correctly. Check logs with `make logs service=<service-name>`
 - **Minikube issues**: SSH into the vm with `make ssh` and restart with `minikube stop && minikube start`. Check status with `minikube status`.
 - **Ansible failures**: Re-run playbooks (they are idempotent). Check Ansible output for errors, e.g., permission issues during Docker setup.
+
+## Notes for the reviewer
+
+I developed this solution on Windows running the commands in Git Bash. I couldn't test this on a linux machine because I only have Linux on Raspberry Pi, which can't run VisualBox.
+
+I also could not get Ansible to work running it from WSL2 and provisioning a VisualBox VM in Windows. Since Ansible is not available for Windows I decided to run Ansible inside the VM. This probably reduces the speed of the VM provisioning and app deployment (it takes around 30 minutes for me to run the whole workflow with `make full-deploy`), but I could not find another way to make it work.
+
+The host machine should thus only need VirtualBox, Vagrant and Make for the deployment to work. Since I ran Make commands in Git Bash and most of them run Vagrant commands, everything should work in Linux. If it does not, I apologise for any inconvenience.
+
+### Possible improvements
+If I had more time I would:
+
+- Make Ansible playbooks cleaner by using roles.
+- Use a reverse-proxy in front of the services.
+- Try to speed up the deployment process (the `deploy-app.yml` playbook). I would look at the parts that take the most time:
+  - minikube cluster start up: Try preloading any images and files in the `setup.yml`,
+  - see if I can reduce the size and build time of frontend and backend docker images.
+- Try to install Ansible in VM using pip: this would enable installation of pip packages needed for `kubernetes.core.k8s` Ansible module, which would simplify the deployment of the apps in the `deploy-app.yml` playbook.
